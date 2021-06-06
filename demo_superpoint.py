@@ -302,6 +302,7 @@ class PointTracker(object):
     for n in range(self.maxl):
       self.all_pts.append(np.zeros((2, 0)))
     self.last_desc = None
+    # 0 by maxl+2 matrix
     self.tracks = np.zeros((0, self.maxl+2))
     self.track_count = 0
     self.max_score = 9999
@@ -466,8 +467,11 @@ class PointTracker(object):
     stroke = 1
     # Iterate through each track and draw it.
     for track in tracks:
+      # print('track size: ' + str(track.shape))
       clr = myjet[int(np.clip(np.floor(track[1]*10), 0, 9)), :]*255
       for i in range(N-1):
+        # print('iteration: ' + str(i))
+        print('number of points: ' + str(pts_mem[i].shape))
         if track[i+2] == -1 or track[i+3] == -1:
           continue
         offset1 = offsets[i]
@@ -483,6 +487,10 @@ class PointTracker(object):
         if i == N-2:
           clr2 = (255, 0, 0)
           cv2.circle(out, p2, stroke, clr2, -1, lineType=16)
+        # Draw start points of each track.
+        if i == 0:
+          clr2 = (0, 0, 255)
+          cv2.circle(out, p1, stroke, clr2, -1, lineType=16)
 
 class VideoStreamer(object):
   """ Class to help process image streams. Three types of possible inputs:"
@@ -592,7 +600,7 @@ if __name__ == '__main__':
       help='Input image height (default: 120).')
   parser.add_argument('--W', type=int, default=160,
       help='Input image width (default:160).')
-  parser.add_argument('--display_scale', type=int, default=2,
+  parser.add_argument('--display_scale', type=int, default=1, # default=2
       help='Factor to scale output visualization (default: 2).')
   parser.add_argument('--min_length', type=int, default=2,
       help='Minimum length of point tracks (default: 2).')
@@ -673,6 +681,8 @@ if __name__ == '__main__':
 
     # Get tracks for points which were match successfully across all frames.
     tracks = tracker.get_tracks(opt.min_length)
+    end2 = time.time()
+    print('tracks matrix size: ' + str(tracks.shape))
 
     # Primary output - Show point tracks overlayed on top of input image.
     out1 = (np.dstack((img, img, img)) * 255.).astype('uint8')
@@ -680,6 +690,9 @@ if __name__ == '__main__':
     tracker.draw_tracks(out1, tracks)
     if opt.show_extra:
       cv2.putText(out1, 'Point Tracks', font_pt, font, font_sc, font_clr, lineType=16)
+    # Modified
+    s = str((end2 - start1)*1000) + ' msec, ' + str(1./float(end2 - start1)) + ' FPS'
+    cv2.putText(out1, s, (0, out1.shape[0]-10), font, font_sc, font_clr, lineType=16)
 
     # Extra output -- Show current point detections.
     out2 = (np.dstack((img, img, img)) * 255.).astype('uint8')
